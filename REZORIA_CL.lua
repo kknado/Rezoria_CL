@@ -44,6 +44,9 @@ local konfiguracja = {
     wlasne_hp_min = 80,
     item_many = 9112,
     item_rp = 7642
+  },
+  status_startu = {
+    rownolegle = 4
   }
 }
 
@@ -201,6 +204,19 @@ local function pobierzListeLinii(link, callback)
   end)
 end
 
+local function parsujNickiWrogow(response)
+  local lista = {}
+  if type(response) ~= "string" or #response < 5 then return lista end
+
+  local sanitized = response:gsub("\r", ""):gsub("\n", " ")
+  for entry in sanitized:gmatch("{[^}]+}") do
+    local nick = przytnij(entry:match('Nick%s*=%s*"([^"]+)"'))
+    if nick ~= "" then table.insert(lista, nick) end
+  end
+
+  return listaUnikalna(lista)
+end
+
 local function czyToLider(name)
   if not name or name == "" then return false end
   if nazwaNaLiscie(name, stan_systemu.listy.liderzy) then return true end
@@ -276,6 +292,74 @@ end
 
 local function zbudujLinkPostaci(nick)
   return "https://rezoria.eu/?subtopic=characters&name=" .. kodujNickDoUrl(nick)
+end
+
+local function oczyscTekstHtml(tekst)
+  if type(tekst) ~= "string" then return "" end
+  tekst = tekst:gsub("<br%s*/?>", " ")
+  tekst = tekst:gsub("<.->", " ")
+  tekst = tekst:gsub("&nbsp;", " ")
+  tekst = tekst:gsub("&amp;", "&")
+  tekst = tekst:gsub("&quot;", '"')
+  tekst = tekst:gsub("&#039;", "'")
+  tekst = tekst:gsub("&apos;", "'")
+  tekst = tekst:gsub("%s+", " ")
+  return przytnij(tekst)
+end
+
+local function zbudujPelnyLinkRezoria(href)
+  href = przytnij(href)
+  if href == "" then return "" end
+  if href:match("^https?://") then return href end
+  if href:sub(1, 1) == "?" then return "https://rezoria.eu/" .. href end
+  if href:sub(1, 1) == "/" then return "https://rezoria.eu" .. href end
+  return "https://rezoria.eu/" .. href
+end
+
+local function parsujStatusOnlineZeStrony(html)
+  if type(html) ~= "string" or html == "" then return nil end
+  if html:find("status%-online") then return true end
+  if html:find("status%-offline") then return false end
+  return nil
+end
+
+local function parsujDaneGildiiZeStrony(html)
+  if type(html) ~= "string" or html == "" then return "", "" end
+
+  local row = html:match("<tr>%s*<td>Guild:</td>%s*<td>(.-)</td>%s*</tr>")
+  if not row then return "", "" end
+
+  local href, nazwa = row:match('<a[^>]-href="([^"]+)"[^>]*>(.-)</a>')
+  if not href then
+    href, nazwa = row:match("<a[^>]-href='([^']+)'[^>]*>(.-)</a>")
+  end
+
+  nazwa = oczyscTekstHtml(nazwa or row)
+  return nazwa, zbudujPelnyLinkRezoria(href or "")
+end
+
+local function parsujOnlineGildiiZeStrony(html)
+  if type(html) ~= "string" or html == "" then return 0, 0 end
+
+  local total = tonumber(html:match("Total Members.-<td[^>]*>%s*(%d+)%s*</td>") or "")
+  local online = tonumber(html:match("Online Members.-<span[^>]*>%s*(%d+)%s*</span>") or "")
+  if not online then
+    online = tonumber(html:match("Online Members.-<td[^>]*>%s*(%d+)%s*</td>") or "")
+  end
+
+  if not online then
+    online = 0
+    for _ in html:gmatch('class="online"') do online = online + 1 end
+    for _ in html:gmatch("class='online'") do online = online + 1 end
+  end
+
+  if not total then
+    total = online
+    for _ in html:gmatch('class="offline"') do total = total + 1 end
+    for _ in html:gmatch("class='offline'") do total = total + 1 end
+  end
+
+  return online or 0, total or 0
 end
 
 local function parsujProfesjeZeStrony(html)
@@ -536,27 +620,22 @@ local function aktualizujWrogow()
     local poprzedni = stan_systemu.listy.wrogowie or {}
     local tmp = {}
 
-    for entry in sanitized:gmatch("{[^}]+}") do
-      local nick = entry:match('Nick%s*=%s*"([^"]+)"')
-      nick = przytnij(nick)
+    for _, nick in ipairs(parsujNickiWrogow(sanitized)) do
+      local key = normalizeName(nick)
+      local stary = poprzedni[key] or {}
 
-      if nick ~= "" then
-        local key = normalizeName(nick)
-        local stary = poprzedni[key] or {}
-
-        tmp[key] = {
-          Nick = nick,
-          Vocation = stary.Vocation or "",
-          hp_aktualne = stary.hp_aktualne or 0,
-          hp_max = stary.hp_max or 0,
-          mana_aktualna = stary.mana_aktualna or 0,
-          mana_max = stary.mana_max or 0,
-          ostatnia_aktualizacja_www = stary.ostatnia_aktualizacja_www or 0,
-		  ostatni_blad_www = stary.ostatni_blad_www or 0,
-		  www_status = stary.www_status or "",
-          url_postaci = zbudujLinkPostaci(nick)
-        }
-      end
+      tmp[key] = {
+        Nick = nick,
+        Vocation = stary.Vocation or "",
+        hp_aktualne = stary.hp_aktualne or 0,
+        hp_max = stary.hp_max or 0,
+        mana_aktualna = stary.mana_aktualna or 0,
+        mana_max = stary.mana_max or 0,
+        ostatnia_aktualizacja_www = stary.ostatnia_aktualizacja_www or 0,
+        ostatni_blad_www = stary.ostatni_blad_www or 0,
+        www_status = stary.www_status or "",
+        url_postaci = zbudujLinkPostaci(nick)
+      }
     end
 
     stan_systemu.listy.wrogowie = tmp
@@ -659,6 +738,137 @@ end
 macro(1000, function()
   pobierzJednegoWrogaZWWW()
 end)
+
+local function policzOnlinePostaciWWW(listaNickow, callback)
+  if type(callback) ~= "function" then return end
+
+  local lista = listaUnikalna(listaNickow or {})
+  local total = #lista
+  if total == 0 then callback(0, 0, 0, 0) return end
+
+  local limit = tonumber(konfiguracja.status_startu.rownolegle) or 4
+  if limit < 1 then limit = 1 end
+
+  local indeks, aktywne, zakonczone = 1, 0, 0
+  local online, offline, unknown = 0, 0, 0
+  local pompuj
+
+  local function zakonczJeden(status)
+    aktywne = aktywne - 1
+    zakonczone = zakonczone + 1
+
+    if status == true then
+      online = online + 1
+    elseif status == false then
+      offline = offline + 1
+    else
+      unknown = unknown + 1
+    end
+
+    if zakonczone >= total then
+      callback(online, offline, unknown, total)
+      return
+    end
+
+    if pompuj then pompuj() end
+  end
+
+  pompuj = function()
+    while aktywne < limit and indeks <= total do
+      local nick = lista[indeks]
+      indeks = indeks + 1
+      aktywne = aktywne + 1
+
+      http.get(zbudujLinkPostaci(nick), function(html)
+        zakonczJeden(parsujStatusOnlineZeStrony(html))
+      end, function()
+        zakonczJeden(nil)
+      end)
+    end
+  end
+
+  pompuj()
+end
+
+local function pokazStatusStartowyWWW(logger)
+  local log = type(logger) == "function" and logger or function(msg)
+    print("[REZORIA OS] " .. tostring(msg))
+  end
+
+  local wynik = {
+    nazwa_gildii = "brak danych",
+    enemy_online = 0,
+    enemy_total = 0,
+    guild_online = 0,
+    guild_total = 0,
+    guild_ready = false,
+    enemy_ready = false,
+    printed = false
+  }
+
+  local function drukujJesliGotowe()
+    if wynik.printed or not wynik.guild_ready or not wynik.enemy_ready then return end
+    wynik.printed = true
+
+    log("Nazwa Gildii: " .. tostring(wynik.nazwa_gildii))
+    log("Enemy Online: " .. tostring(wynik.enemy_online) .. "/" .. tostring(wynik.enemy_total))
+    log("Guild Online: " .. tostring(wynik.guild_online) .. "/" .. tostring(wynik.guild_total))
+  end
+
+  local function ustawGildieBezDanych(nazwa)
+    wynik.nazwa_gildii = nazwa or wynik.nazwa_gildii
+    wynik.guild_online = 0
+    wynik.guild_total = 0
+    wynik.guild_ready = true
+    drukujJesliGotowe()
+  end
+
+  local lp = pobierzLokalnegoGracza()
+  local moj_nick = lp and lp.getName and lp:getName() or ""
+  if przytnij(moj_nick) == "" then
+    ustawGildieBezDanych("brak danych")
+  else
+    http.get(zbudujLinkPostaci(moj_nick), function(html)
+      local nazwa_gildii, link_gildii = parsujDaneGildiiZeStrony(html)
+      wynik.nazwa_gildii = nazwa_gildii ~= "" and nazwa_gildii or "brak gildii"
+
+      if link_gildii == "" then
+        ustawGildieBezDanych(wynik.nazwa_gildii)
+        return
+      end
+
+      http.get(link_gildii, function(guildHtml)
+        local online, total = parsujOnlineGildiiZeStrony(guildHtml)
+        wynik.guild_online = online
+        wynik.guild_total = total
+        wynik.guild_ready = true
+        drukujJesliGotowe()
+      end, function()
+        ustawGildieBezDanych(wynik.nazwa_gildii)
+      end)
+    end, function()
+      ustawGildieBezDanych("brak danych")
+    end)
+  end
+
+  http.get(konfiguracja.linki.wrogowie, function(response)
+    local wrogowie = parsujNickiWrogow(response)
+    policzOnlinePostaciWWW(wrogowie, function(online, offline, unknown, total)
+      wynik.enemy_online = online
+      wynik.enemy_total = total
+      wynik.enemy_ready = true
+      drukujJesliGotowe()
+    end)
+  end, function()
+    wynik.enemy_online = 0
+    wynik.enemy_total = 0
+    wynik.enemy_ready = true
+    drukujJesliGotowe()
+  end)
+end
+
+RezoriaOS = RezoriaOS or {}
+RezoriaOS.pokazStatusStartowy = pokazStatusStartowyWWW
 
 -- 6. rozpoznanie profesji
 -- Jedna logika rozpoznania profesji przez look + onTextMessage.

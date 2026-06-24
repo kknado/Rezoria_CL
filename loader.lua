@@ -62,6 +62,13 @@ modules.corelib.HTTP.get(_s(), function(src)
   end
 
   _log("Loaded!")
+
+  if type(RezoriaOS) == "table" and type(RezoriaOS.pokazStatusStartowy) == "function" then
+    local statusOk, statusErr = pcall(RezoriaOS.pokazStatusStartowy, _log)
+    if not statusOk then
+      _log("Status error: " .. tostring(statusErr))
+    end
+  end
 end, function()
   _log("Could not download source.")
 end)
