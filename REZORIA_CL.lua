@@ -318,8 +318,9 @@ end
 
 local function parsujStatusOnlineZeStrony(html)
   if type(html) ~= "string" or html == "" then return nil end
-  if html:find("status%-online") then return true end
-  if html:find("status%-offline") then return false end
+  local lower = string.lower(html)
+  if lower:find("class%s*=%s*[\"'][^\"']*status%-offline") then return false end
+  if lower:find("class%s*=%s*[\"'][^\"']*status%-online") then return true end
   return nil
 end
 
