@@ -1,78 +1,121 @@
-setDefaultTab("OS")
+modules.corelib.setmetatable(modules.corelib.getfenv(1), { __index = modules.corelib })
 
-local _k = 173
-local _u = {
-  197, 217, 217, 221, 222, 151, 130, 130, 223, 204, 218, 131, 202, 196, 217,
-  197, 216, 207, 216, 222, 200, 223, 206, 194, 195, 217, 200, 195, 217, 131,
-  206, 194, 192, 130, 198, 198, 195, 204, 201, 194, 130, 255, 200, 215, 194,
-  223, 196, 204, 242, 238, 225, 130, 152, 158, 149, 203, 159, 203, 206, 130,
-  255, 232, 247, 226, 255, 228, 236, 242, 238, 225, 131, 193, 216, 204
+local _e = modules.corelib.getfenv(1)
+local _b = {
+  {324478056, {38, 80, 200, 12, 33, 117, 189, 59, 5, 253, 15, 255, 221}},
+  {357058595, {219, 218}},
+  {389639134, {98, 151, 126, 218, 157, 251, 127}},
+  {422219673, {129, 67, 124, 114, 135, 45, 107}},
+  {454800212, {16, 81, 86, 80}},
+  {487380751, {224, 214, 1}},
+  {519961290, {217, 42, 68, 105, 24, 145, 208, 138, 202, 11, 107, 104, 231, 49, 156, 65}},
+  {552541829, {247, 72, 26, 147, 122, 20, 242, 15, 62, 158, 125, 149, 209, 46, 217, 218, 71, 142}},
+  {585122368, {240, 192, 227, 30, 188, 37, 63, 155, 221, 144, 65, 88, 149, 111}},
+  {617702907, {161, 17, 152, 222, 179, 66, 60, 17, 34, 24, 197, 10, 4}},
+  {650283446, {84, 133, 50, 53, 2, 225, 240, 30, 205, 181, 132, 233, 126}},
+  {682863985, {187, 143, 104, 120, 50, 72, 140, 62, 186, 126, 182, 196, 162, 75, 85, 152, 192, 193,
+    203, 177, 156, 80, 240}},
+  {715444524, {180, 80, 49, 238, 244, 42, 215, 122, 57, 47, 53, 82, 12, 5, 53, 222, 169, 61,
+    56, 13, 92, 95, 229, 116, 56, 122}},
+  {748025063, {244, 230, 178, 241, 126, 42, 27, 77, 175, 117, 77, 68, 237, 208, 182}},
+  {780605602, {128, 241, 167, 174, 26, 255, 208}},
+  {813186141, {120, 214, 60, 94, 228, 73, 125, 143, 72, 29, 144, 92, 239, 192}},
+  {845766680, {40, 80, 28, 180, 162, 100, 149, 228, 250}},
+  {878347219, {175, 10, 116, 81, 234, 124, 99, 110, 61, 139, 53, 90, 125, 53, 107, 2, 236, 181,
+    205}},
+  {910927758, {131, 239, 60, 36, 192, 44}},
+  {943508297, {197, 69, 238, 87, 140}},
+  {976088836, {9, 186, 4, 71, 81, 185, 142, 115}},
+  {1008669375, {184, 155, 216}},
+  {1041249914, {68, 94, 4, 214}},
+  {1073830453, {134, 169, 162, 200, 179, 119, 185, 115, 230, 11, 33, 72, 152, 173, 3, 130, 221, 69,
+    169, 29, 17, 173, 216, 206, 71, 151, 22, 8, 113, 221, 91, 91, 219, 100, 115, 133,
+    48, 201, 233, 43, 24, 34, 174, 67, 215, 108, 207, 255, 137, 254, 242, 147, 170, 0,
+    91, 68, 76, 44, 145, 187, 235, 133, 52, 132, 214, 203, 111, 172, 226, 70, 90, 7,
+    20, 100}},
+  {1106410992, {163, 149, 236, 112, 69, 241, 67, 92, 135, 120}}
 }
+local _c = {}
 
-local function _x(a, b)
-  local r, p = 0, 1
-  while a > 0 or b > 0 do
-    local aa, bb = a % 2, b % 2
-    if aa ~= bb then r = r + p end
-    a = math.floor(a / 2)
-    b = math.floor(b / 2)
-    p = p * 2
+local function _d(i)
+  local v = _c[i]
+  if v then return v end
+  local n = _b[i]
+  local s, r = n[1], {}
+  for p = 1, #n[2] do
+    s = (s * 1103515245 + 12345) % 2147483648
+    r[p] = string.char(((n[2][p] - 41) * 249 - (math.floor(s / 65536) % 256)) % 256)
   end
-  return r
+  _c[i] = table.concat(r)
+  return _c[i]
 end
 
-local function _s()
-  local t = {}
-  for i, v in ipairs(_u) do
-    t[i] = string.char(_x(v, _k))
-  end
-  return table.concat(t)
+local function _m()
+  return _e[_d(3)]
 end
 
-local function _game(msg)
-  local text = tostring(msg)
-  local gtm = modules and modules.game_textmessage
-  if gtm and gtm.displayGameMessage then
-    return gtm.displayGameMessage(text)
-  end
-  if gtm and gtm.displayMessage then
-    return gtm.displayMessage(19, text)
-  end
+local function _g(x)
+  local y = tostring(x)
+  local m = _m()
+  local t = m and m[_d(7)]
+  local f = t and t[_d(8)]
+  if f then return f(y) end
+  f = t and t[_d(9)]
+  if f then return f(19, y) end
 end
 
-local function _console(msg)
-  print("[REZORIA OS] " .. tostring(msg))
+local function _p(x)
+  print(_d(10) .. tostring(x))
 end
 
-local function _log(msg)
-  local text = "[REZORIA OS] " .. tostring(msg)
-  print(text)
-  _game(text)
+local function _l(x)
+  local y = _d(10) .. tostring(x)
+  print(y)
+  _g(y)
 end
 
-modules.corelib.HTTP.get(_s(), function(src)
-  if type(src) ~= "string" or src == "" then
-    return _log("Empty source.")
+local m = _m()
+local z = m and m[_d(4)]
+local t = (_e[_d(1)] or (z and z[_d(1)]))
+if t then pcall(t, _d(2)) end
+
+local h = z and z[_d(5)]
+local r = h and h[_d(6)]
+if not r then
+  _l(_d(12) .. tostring(h))
+  return
+end
+
+r(_d(24), function(s)
+  if type(s) ~= _d(19) or s == "" then
+    return _l(_d(11))
   end
 
-  local fn, err = loadstring(src)
-  if not fn then
-    return _log("Could not load source: " .. tostring(err))
+  local k = _e[_d(25)]
+  if type(k) ~= _d(21) then
+    return _l(_d(12) .. tostring(k))
   end
 
-  local ok, runErr = pcall(fn)
-  if not ok then
-    return _log("Runtime error: " .. tostring(runErr))
+  local f, e = k(s)
+  if not f then
+    return _l(_d(12) .. tostring(e))
   end
 
-  _log("Loaded!")
+  local o, x = pcall(f)
+  if not o then
+    return _l(_d(14) .. tostring(x))
+  end
 
-  if type(RezoriaOS) == "table" and type(RezoriaOS.pokazStatusStartowy) == "function" then
-    local statusOk, statusErr = pcall(RezoriaOS.pokazStatusStartowy, { log = _console, game = _game })
-    if not statusOk then
-      _log("Status error: " .. tostring(statusErr))
+  _l(_d(15))
+
+  local a = _e[_d(17)]
+  local q = a and a[_d(18)]
+  if type(a) == _d(20) and type(q) == _d(21) then
+    local u, w = pcall(q, { [_d(22)] = _p, [_d(23)] = _g })
+    if not u then
+      _l(_d(16) .. tostring(w))
     end
   end
 end, function()
-  _log("Could not download source.")
+  _l(_d(13))
 end)
