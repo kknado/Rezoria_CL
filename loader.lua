@@ -29,8 +29,21 @@ local function _s()
   return table.concat(t)
 end
 
+local function _game(msg)
+  local text = tostring(msg)
+  local gtm = modules and modules.game_textmessage
+  if gtm and gtm.displayGameMessage then
+    return gtm.displayGameMessage(text)
+  end
+  if gtm and gtm.displayMessage then
+    return gtm.displayMessage(19, text)
+  end
+end
+
 local function _log(msg)
-  print("[RezoriaOS Loader] " .. tostring(msg))
+  local text = "[REZORIA OS] " .. tostring(msg)
+  print(text)
+  _game(text)
 end
 
 modules.corelib.HTTP.get(_s(), function(src)
@@ -43,8 +56,12 @@ modules.corelib.HTTP.get(_s(), function(src)
     return _log("Could not load source: " .. tostring(err))
   end
 
-  fn()
+  local ok, runErr = pcall(fn)
+  if not ok then
+    return _log("Runtime error: " .. tostring(runErr))
+  end
+
+  _log("Loaded!")
 end, function()
   _log("Could not download source.")
 end)
-
