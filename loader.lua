@@ -5,7 +5,7 @@ local _u = {
   197, 217, 217, 221, 222, 151, 130, 130, 223, 204, 218, 131, 202, 196, 217,
   197, 216, 207, 216, 222, 200, 223, 206, 194, 195, 217, 200, 195, 217, 131,
   206, 194, 192, 130, 198, 198, 195, 204, 201, 194, 130, 255, 200, 215, 194,
-  223, 196, 204, 242, 238, 225, 130, 149, 154, 148, 207, 154, 200, 152, 130,
+  223, 196, 204, 242, 238, 225, 130, 152, 158, 149, 203, 159, 203, 206, 130,
   255, 232, 247, 226, 255, 228, 236, 242, 238, 225, 131, 193, 216, 204
 }
 
@@ -40,6 +40,10 @@ local function _game(msg)
   end
 end
 
+local function _console(msg)
+  print("[REZORIA OS] " .. tostring(msg))
+end
+
 local function _log(msg)
   local text = "[REZORIA OS] " .. tostring(msg)
   print(text)
@@ -64,7 +68,7 @@ modules.corelib.HTTP.get(_s(), function(src)
   _log("Loaded!")
 
   if type(RezoriaOS) == "table" and type(RezoriaOS.pokazStatusStartowy) == "function" then
-    local statusOk, statusErr = pcall(RezoriaOS.pokazStatusStartowy, _log)
+    local statusOk, statusErr = pcall(RezoriaOS.pokazStatusStartowy, { log = _console, game = _game })
     if not statusOk then
       _log("Status error: " .. tostring(statusErr))
     end
