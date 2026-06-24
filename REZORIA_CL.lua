@@ -800,6 +800,7 @@ local function pokazStatusStartowyWWW(logger)
     nazwa_gildii = "brak danych",
     enemy_online = 0,
     enemy_total = 0,
+    enemy_unknown = 0,
     guild_online = 0,
     guild_total = 0,
     guild_ready = false,
@@ -812,7 +813,12 @@ local function pokazStatusStartowyWWW(logger)
     wynik.printed = true
 
     log("Nazwa Gildii: " .. tostring(wynik.nazwa_gildii))
-    log("Enemy Online: " .. tostring(wynik.enemy_online) .. "/" .. tostring(wynik.enemy_total))
+    local enemyText = "Enemy Online: " .. tostring(wynik.enemy_online) .. "/" .. tostring(wynik.enemy_total) .. " (Pastebin"
+    if (wynik.enemy_unknown or 0) > 0 then
+      enemyText = enemyText .. "; brak statusu: " .. tostring(wynik.enemy_unknown)
+    end
+    enemyText = enemyText .. ")"
+    log(enemyText)
     log("Guild Online: " .. tostring(wynik.guild_online) .. "/" .. tostring(wynik.guild_total))
   end
 
@@ -857,12 +863,14 @@ local function pokazStatusStartowyWWW(logger)
     policzOnlinePostaciWWW(wrogowie, function(online, offline, unknown, total)
       wynik.enemy_online = online
       wynik.enemy_total = total
+      wynik.enemy_unknown = unknown
       wynik.enemy_ready = true
       drukujJesliGotowe()
     end)
   end, function()
     wynik.enemy_online = 0
     wynik.enemy_total = 0
+    wynik.enemy_unknown = 0
     wynik.enemy_ready = true
     drukujJesliGotowe()
   end)
