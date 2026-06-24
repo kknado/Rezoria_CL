@@ -792,8 +792,16 @@ local function policzOnlinePostaciWWW(listaNickow, callback)
 end
 
 local function pokazStatusStartowyWWW(logger)
-  local log = type(logger) == "function" and logger or function(msg)
-    print("[REZORIA OS] " .. tostring(msg))
+  local log = type(logger) == "table" and logger.log or logger
+  if type(log) ~= "function" then
+    log = function(msg)
+      print("[REZORIA OS] " .. tostring(msg))
+    end
+  end
+
+  local gameLog = type(logger) == "table" and logger.game or nil
+  if type(gameLog) ~= "function" then
+    gameLog = nil
   end
 
   local wynik = {
@@ -808,18 +816,32 @@ local function pokazStatusStartowyWWW(logger)
     printed = false
   }
 
-  local function drukujJesliGotowe()
-    if wynik.printed or not wynik.guild_ready or not wynik.enemy_ready then return end
-    wynik.printed = true
-
-    log("Nazwa Gildii: " .. tostring(wynik.nazwa_gildii))
+  local function zbudujTekstEnemy()
     local enemyText = "Enemy Online: " .. tostring(wynik.enemy_online) .. "/" .. tostring(wynik.enemy_total) .. " (Pastebin"
     if (wynik.enemy_unknown or 0) > 0 then
       enemyText = enemyText .. "; brak statusu: " .. tostring(wynik.enemy_unknown)
     end
-    enemyText = enemyText .. ")"
+    return enemyText .. ")"
+  end
+
+  local function zbudujTekstGuild()
+    return "Guild Online: " .. tostring(wynik.guild_online) .. "/" .. tostring(wynik.guild_total)
+  end
+
+  local function drukujJesliGotowe()
+    if wynik.printed or not wynik.guild_ready or not wynik.enemy_ready then return end
+    wynik.printed = true
+
+    local guildText = zbudujTekstGuild()
+    local enemyText = zbudujTekstEnemy()
+
+    log("Nazwa Gildii: " .. tostring(wynik.nazwa_gildii))
     log(enemyText)
-    log("Guild Online: " .. tostring(wynik.guild_online) .. "/" .. tostring(wynik.guild_total))
+    log(guildText)
+
+    if gameLog then
+      gameLog("[REZORIA OS]\n" .. guildText .. "\n" .. enemyText)
+    end
   end
 
   local function ustawGildieBezDanych(nazwa)
