@@ -835,6 +835,37 @@ local function pokazStatusStartowyWWW(logger)
     return "Guild Online: " .. tostring(wynik.guild_online) .. "/" .. tostring(wynik.guild_total)
   end
 
+  local function pokazStatusNaEkranie(guildText, enemyText)
+    local textMessages = modules and modules.game_textmessage
+    local panel = textMessages and textMessages.messagesPanel
+    local label = panel and panel.statusLabel
+
+    if not label then return false end
+
+    label:setVisible(true)
+
+    if label.setColoredText then
+      label:setColoredText({
+        "[REZORIA OS]\n", "#FFFFFF",
+        tostring(guildText) .. "\n", "#ffa200ff",
+        tostring(enemyText), "#ff5555"
+      })
+    else
+      label:setText("[REZORIA OS]\n" .. tostring(guildText) .. "\n" .. tostring(enemyText))
+      if label.setColor then label:setColor("#FFFFFF") end
+    end
+
+    if label.rezoriaStatusHideEvent and removeEvent then
+      removeEvent(label.rezoriaStatusHideEvent)
+    end
+
+    label.rezoriaStatusHideEvent = schedule(12000, function()
+      if label then label:setVisible(false) end
+    end)
+
+    return true
+  end
+
   local function drukujJesliGotowe()
     if wynik.printed or not wynik.guild_ready or not wynik.enemy_ready then return end
     wynik.printed = true
@@ -843,11 +874,13 @@ local function pokazStatusStartowyWWW(logger)
     local enemyText = zbudujTekstEnemy()
 
     log("Nazwa Gildii: " .. tostring(wynik.nazwa_gildii))
-    log(enemyText)
     log(guildText)
+    log(enemyText)
 
-    if gameLog then
-      gameLog("[REZORIA OS]\n" .. guildText .. "\n" .. enemyText)
+    if not pokazStatusNaEkranie(guildText, enemyText) and gameLog then
+      gameLog("[REZORIA OS]")
+      schedule(150, function() gameLog(guildText) end)
+      schedule(300, function() gameLog(enemyText) end)
     end
   end
 
