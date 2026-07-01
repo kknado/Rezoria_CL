@@ -46,7 +46,8 @@ local konfiguracja = {
     item_rp = 7642
   },
   status_startu = {
-    rownolegle = 4
+    rownolegle = 4,
+    timeout_ms = 15000
   }
 }
 
@@ -740,8 +741,9 @@ macro(1000, function()
   pobierzJednegoWrogaZWWW()
 end)
 
-local function policzOnlinePostaciWWW(listaNickow, callback)
+local function policzOnlinePostaciWWW(listaNickow, callback, progressCallback)
   if type(callback) ~= "function" then return end
+  if type(progressCallback) ~= "function" then progressCallback = nil end
 
   local lista = listaUnikalna(listaNickow or {})
   local total = #lista
@@ -764,6 +766,10 @@ local function policzOnlinePostaciWWW(listaNickow, callback)
       offline = offline + 1
     else
       unknown = unknown + 1
+    end
+
+    if progressCallback then
+      progressCallback(online, offline, unknown, total, zakonczone)
     end
 
     if zakonczone >= total then
@@ -808,6 +814,7 @@ local function pokazStatusStartowyWWW(logger)
     nazwa_gildii = "brak danych",
     enemy_online = 0,
     enemy_total = 0,
+    enemy_offline = 0,
     enemy_unknown = 0,
     guild_online = 0,
     guild_total = 0,
@@ -842,6 +849,37 @@ local function pokazStatusStartowyWWW(logger)
     if gameLog then
       gameLog("[REZORIA OS]\n" .. guildText .. "\n" .. enemyText)
     end
+  end
+
+  local function wymusDrukowaniePoTimeout()
+    if wynik.printed then return end
+
+    if not wynik.guild_ready then
+      wynik.guild_online = wynik.guild_online or 0
+      wynik.guild_total = wynik.guild_total or 0
+      wynik.guild_ready = true
+    end
+
+    if not wynik.enemy_ready then
+      local total = tonumber(wynik.enemy_total) or 0
+      local online = tonumber(wynik.enemy_online) or 0
+      local offline = tonumber(wynik.enemy_offline) or 0
+      local unknown = tonumber(wynik.enemy_unknown) or 0
+      local pozostale = total - online - offline - unknown
+
+      if pozostale > 0 then
+        wynik.enemy_unknown = unknown + pozostale
+      end
+
+      wynik.enemy_ready = true
+    end
+
+    drukujJesliGotowe()
+  end
+
+  local timeout = tonumber(konfiguracja.status_startu.timeout_ms) or 15000
+  if timeout > 0 then
+    schedule(timeout, wymusDrukowaniePoTimeout)
   end
 
   local function ustawGildieBezDanych(nazwa)
@@ -882,16 +920,24 @@ local function pokazStatusStartowyWWW(logger)
 
   http.get(konfiguracja.linki.wrogowie, function(response)
     local wrogowie = parsujNickiWrogow(response)
+    wynik.enemy_total = #listaUnikalna(wrogowie)
     policzOnlinePostaciWWW(wrogowie, function(online, offline, unknown, total)
       wynik.enemy_online = online
       wynik.enemy_total = total
+      wynik.enemy_offline = offline
       wynik.enemy_unknown = unknown
       wynik.enemy_ready = true
       drukujJesliGotowe()
+    end, function(online, offline, unknown, total)
+      wynik.enemy_online = online
+      wynik.enemy_total = total
+      wynik.enemy_offline = offline
+      wynik.enemy_unknown = unknown
     end)
   end, function()
     wynik.enemy_online = 0
     wynik.enemy_total = 0
+    wynik.enemy_offline = 0
     wynik.enemy_unknown = 0
     wynik.enemy_ready = true
     drukujJesliGotowe()
