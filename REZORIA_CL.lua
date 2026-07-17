@@ -43,7 +43,7 @@ local konfiguracja = {
     wlasna_mana_min = 85,
     wlasne_hp_min = 80,
     item_many = 9112,
-    item_rp = 7642
+    item_rp = 11364
   },
   status_startu = {
     rownolegle = 4,
@@ -407,19 +407,23 @@ local function czySojusznik(name, creature)
   return nazwaNaLiscie(name, stan_systemu.listy.sojusznicy)
 end
 
-local function tabelaMaNick(tabela, nick)
-  if type(tabela) ~= "table" then return false end
+local function pobierzWartoscPoNicku(tabela, nick)
+  if type(tabela) ~= "table" then return nil end
   local clean = przytnij(nick)
-  if clean == "" then return false end
-  if tabela[clean] ~= nil then return true end
+  if clean == "" then return nil end
+  if tabela[clean] ~= nil then return tabela[clean] end
 
   local key = normalizeName(clean)
-  for wpis, _ in pairs(tabela) do
+  for wpis, wartosc in pairs(tabela) do
     if normalizeName(tostring(wpis or "")) == key then
-      return true
+      return wartosc
     end
   end
-  return false
+  return nil
+end
+
+local function tabelaMaNick(tabela, nick)
+  return pobierzWartoscPoNicku(tabela, nick) ~= nil
 end
 
 local function oznaczCzlonkaBotServera(nick, vocation)
@@ -447,6 +451,29 @@ local function czyCzlonekBotServera(nick)
 
   if type(vBot) == "table" and tabelaMaNick(vBot.BotServerMembers, clean) then return true end
   return tabelaMaNick(BotServerMembers, clean)
+end
+
+local function pobierzProfesjeCzlonkaBotServera(nick)
+  local clean = przytnij(nick)
+  if clean == "" then return nil end
+
+  local wpis = stan_systemu.botserver.mana_sojusznikow[normalizeName(clean)]
+  if wpis and now - (wpis.czas or 0) <= konfiguracja.botserver.dane_ttl_ms then
+    local vocation = przytnij(tostring(wpis.vocation or ""))
+    if vocation ~= "" then return skrotProfesji(vocation) end
+  end
+
+  local vocation
+  if type(vBot) == "table" then
+    vocation = pobierzWartoscPoNicku(vBot.BotServerMembers, clean)
+  end
+
+  if type(vocation) ~= "string" or przytnij(vocation) == "" then
+    vocation = pobierzWartoscPoNicku(BotServerMembers, clean)
+  end
+
+  if type(vocation) ~= "string" or przytnij(vocation) == "" then return nil end
+  return skrotProfesji(vocation)
 end
 
 local function znajdzGraczaPoNicku(nick)
@@ -1246,6 +1273,16 @@ local function wybierzNajstarszegoLokalnegoProszacego(myPos)
   return wybrany_swiezy_gracz or wybrany_stabilny_gracz
 end
 
+local function czyMojaProfesjaMozePotowacProfesje(targetVocation)
+  local moj = skrotProfesji(stan_systemu.zawod.moj)
+  local target = skrotProfesji(targetVocation)
+
+  if target == "" or target == "UNKNOWN" then return false end
+  if moj == "ED" or moj == "MS" then return target == "ED" or target == "MS" end
+  if moj == "RP" then return target == "RP" end
+  return false
+end
+
 local function wykonajPotowanieProsby()
   local lp = pobierzLokalnegoGracza()
   if not lp then return false end
@@ -1254,13 +1291,16 @@ local function wykonajPotowanieProsby()
   local proszacy = wybierzNajstarszegoLokalnegoProszacego(myPos)
   if not proszacy then return false end
 
+  local profesja_proszacego = pobierzProfesjeCzlonkaBotServera(proszacy:getName())
+  if not czyMojaProfesjaMozePotowacProfesje(profesja_proszacego) then return false end
+
   if (stan_systemu.zawod.moj == "ED" or stan_systemu.zawod.moj == "MS") and manapercent() > 85 then
-    useWith(9112, proszacy)
+    useWith(konfiguracja.botserver.item_many, proszacy)
     return true
   end
 
   if stan_systemu.zawod.moj == "RP" and hppercent() > 80 then
-    useWith(7642, proszacy)
+    useWith(konfiguracja.botserver.item_rp, proszacy)
     return true
   end
 
@@ -1281,6 +1321,7 @@ local function czyMoznaPotowacPrzezBotServer(creature)
   local key = normalizeName(name)
   if key == "" then return false end
   if stan_systemu.listy.wrogowie[key] then return false end
+  if not czyMojaProfesjaMozePotowacProfesje(pobierzProfesjeCzlonkaBotServera(name)) then return false end
   return czyCzlonekBotServera(name)
 end
 
