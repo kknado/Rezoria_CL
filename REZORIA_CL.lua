@@ -6,7 +6,7 @@ local console = modules.game_console
 -- 1. konfiguracja
 -- Glowna konfiguracja i stale systemu.
 local konfiguracja = {
-  kanaly_gildii = { "Second fight" },
+  kanaly_gildii = { "Ekipa No-Logo" },
   linki = {
     liderzy_glowni = "https://pastebin.com/raw/hAfKSBHe",
     liderzy_combo = "https://pastebin.com/raw/hAfKSBHe",
