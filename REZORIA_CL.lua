@@ -15,7 +15,9 @@ local konfiguracja = {
     sojusznicy = "https://pastebin.com/raw/rpLJ4hdA"
   },
   domyslni_liderzy = {
-  "Legenda"
+    "Legenda",
+    "FRIZ",
+    "Karzel Blazej"
   },
   ignorowane_prefiksy = {
     "trgt:", "odlicz:", "bomba, target:", "cl, odznacz target"
